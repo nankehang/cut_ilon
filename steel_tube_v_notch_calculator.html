@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="lo" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมคำนวณระยะบากเหล็กกล่องดัดโค้ง (Steel Tube Notch Calculator)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        steel: {
+                            50: '#f4f6f8',
+                            100: '#e5e9ee',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#080d1a',
+                        },
+                        amberAccent: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Kanit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts: Kanit for Thai typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Noto+Sans+Lao:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Noto Sans Lao', 'Kanit', 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            body {
+                background-color: #fff !important;
+                color: #000 !important;
+            }
+            .print-card {
+                border: 1px solid #ccc !important;
+                background: #fff !important;
+                color: #000 !important;
+                box-shadow: none !important;
+            }
+            canvas {
+                border: 1px solid #000 !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100 antialiased selection:bg-amber-500 selection:text-slate-950">
+
+    <!-- Navigation Header -->
+    <header class="no-print bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-500 text-slate-950 p-2.5 rounded-xl shadow-lg shadow-amber-500/20 flex items-center justify-center">
+                    <i class="fa-solid fa-compass-drafting text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg sm:text-xl tracking-tight text-white flex items-center gap-2">
+                        คำนวณบากเหล็กกล่องดัดโค้ง
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">V-Notch Pro</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">คำนวณระยะบาก รอยตัดฟันปลา และรัศมีดัดม้วนสำหรับงานช่างเหล็ก</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition-all flex items-center gap-2 shadow-sm active:scale-95">
+                    <i class="fa-solid fa-print text-amber-400"></i>
+                    <span class="hidden sm:inline">พิมพ์แบบร่าง (Print)</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Input Controls -->
+        <section class="no-print lg:col-span-4 space-y-5">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                    <h2 class="font-semibold text-base text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-amber-400"></i>
+                        ตั้งค่าขนาดเหล็กและมุมดัด
+                    </h2>
+                    <button onclick="resetDefaults()" class="text-xs text-slate-400 hover:text-amber-400 transition-colors">
+                        <i class="fa-solid fa-rotate-left mr-1"></i>คืนค่าเดิม
+                    </button>
+                </div>
+
+                <form id="calcForm" onsubmit="event.preventDefault();" class="space-y-4">
+                    
+                    <!-- Tube Height (Depth facing bend) -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1 flex justify-between">
+                            <span>ความหนาเหล็กกล่องด้านที่บาก (H)</span>
+                            <span class="text-amber-400 font-mono text-xs" id="val_tubeHeight">38 mm</span>
+                        </label>
+                        <div class="relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-ruler-vertical text-sm"></i>
+                            </div>
+                            <input type="number" id="tubeHeight" value="3.8" min="1" max="30" step="0.1" 
+                                class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-12 py-2 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-500">
+                                มม. (mm)
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1">ความสูง/ความลึกของเหล็กกล่องตามแนวที่จะทำการบากวี</p>
+                    </div>
+
+                    <!-- Tube Width -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1 flex justify-between">
+                            <span>ความกว้างเหล็กกล่องด้านหน้า (W)</span>
+                            <span class="text-amber-400 font-mono text-xs" id="val_tubeWidth">25 mm</span>
+                        </label>
+                        <div class="relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-ruler-horizontal text-sm"></i>
+                            </div>
+                            <input type="number" id="tubeWidth" value="2.5" min="1" max="30" step="0.1"
+                                class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-12 py-2 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-500">
+                                มม. (mm)
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bend Angle -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1 flex justify-between">
+                            <span>มุมรวมที่ต้องการดัด (Bend Angle)</span>
+                            <span class="text-amber-400 font-mono text-xs" id="val_bendAngle">90°</span>
+                        </label>
+                        <div class="relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-compass text-sm"></i>
+                            </div>
+                            <input type="number" id="bendAngle" value="90" min="5" max="360" step="1"
+                                class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-12 py-2 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-500">
+                                องศา (°)
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 gap-1.5 mt-2">
+                            <button type="button" onclick="setAngle(45)" class="py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition-colors">45°</button>
+                            <button type="button" onclick="setAngle(60)" class="py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition-colors">60°</button>
+                            <button type="button" onclick="setAngle(90)" class="py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition-colors">90°</button>
+                            <button type="button" onclick="setAngle(180)" class="py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition-colors">180°</button>
+                        </div>
+                    </div>
+
+                    <!-- Inner Radius -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1 flex justify-between">
+                            <span>รัศมีโค้งด้านในที่ต้องการ (Inner Radius - R)</span>
+                            <span class="text-amber-400 font-mono text-xs" id="val_innerRadius">100 mm</span>
+                        </label>
+                        <div class="relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-circle-notch text-sm"></i>
+                            </div>
+                            <input type="number" id="innerRadius" value="10" min="0.5" max="200" step="0.1"
+                                class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-12 py-2 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-500">
+                                มม. (mm)
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1">ยิ่งรัศมีกว้าง โค้งยิ่งกว้างโปร่ง (ถ้าดัดหักศอกตั้งค่าเป็น 0 - 10)</p>
+                    </div>
+
+                    <!-- Number of Cuts -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1 flex justify-between">
+                            <span>จำนวนรอยตัด/ช่องบาก (Cuts Count - N)</span>
+                            <span class="text-amber-400 font-mono text-xs" id="val_numCuts">8 รอย</span>
+                        </label>
+                        <div class="flex items-center space-x-3">
+                            <input type="range" id="numCutsRange" value="8" min="1" max="24" step="1" 
+                                class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500">
+                            <input type="number" id="numCuts" value="8" min="1" max="50" step="1"
+                                class="w-20 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-center text-sm font-mono text-amber-400 focus:ring-2 focus:ring-amber-500 outline-none">
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1">จำนวนรอยยิ่งมาก งานดัดจะยิ่งโค้งเรียบเนียนเป็นวงกลม</p>
+                    </div>
+
+                    <!-- Kerf / Blade Thickness -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1 flex justify-between">
+                            <span>ความหนาใบตัดเครื่องเจียร์ (Blade Kerf)</span>
+                            <span class="text-amber-400 font-mono text-xs" id="val_kerf">1.2 mm</span>
+                        </label>
+                        <div class="relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-grip-lines-vertical text-sm"></i>
+                            </div>
+                            <input type="number" id="kerf" value="0.12" min="0" max="1" step="0.01"
+                                class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-12 py-2 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-500">
+                                มม. (mm)
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- Helpful Hints Card -->
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 text-xs text-slate-400 space-y-2">
+                <div class="font-semibold text-slate-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-lightbulb text-amber-400"></i>
+                    ข้อแนะนำสำหรับช่างเหล็ก
+                </div>
+                <ul class="list-disc list-inside space-y-1 text-slate-400 text-[11px] leading-relaxed">
+                    <li>บากเผื่อแผลตัดเจียร์เสมอ หากใช้ใบตัดหนา 1.2-2.0 มม. ให้ใช้ค่าที่คำนวณรอยบากรวมเคิฟ</li>
+                    <li>เวลาตัดบาก ให้เหลือเนื้อเหล็กด้านล่าง (สันดัด) ไว้ประมาณ <strong class="text-slate-200">1.0 - 1.5 มม.</strong> ห้ามตัดขาดเพื่อใช้เป็นบานพับในการดัด</li>
+                    <li>เมื่อดัดชิดกันแล้ว ให้เชื่อมแต้มล็อคหัวท้ายก่อนไล่เชื่อมเต็ม</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Right Column: Calculation Results & Visualizers -->
+        <section class="lg:col-span-8 space-y-6">
+
+            <!-- Summary Results Dashboard Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                <!-- Card 1: V-Notch Width -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-md border-l-4 border-l-amber-500">
+                    <span class="text-[11px] font-medium text-slate-400 block mb-1">ความกว้างร่องวี (W<sub>notch</sub>)</span>
+                    <div class="text-xl sm:text-2xl font-bold font-mono text-amber-400" id="res_notchWidth">0.0 <span class="text-xs text-slate-400 font-sans">มม.</span></div>
+                    <span class="text-[10px] text-slate-500 block mt-1">ปากแผลตัดบนสุดต่อ 1 ช่อง</span>
+                </div>
+
+                <!-- Card 2: Pitch (Spacing) -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-md border-l-4 border-l-cyan-500">
+                    <span class="text-[11px] font-medium text-slate-400 block mb-1">ระยะห่างรอยตัด (Pitch)</span>
+                    <div class="text-xl sm:text-2xl font-bold font-mono text-cyan-400" id="res_pitch">0.0 <span class="text-xs text-slate-400 font-sans">มม.</span></div>
+                    <span class="text-[10px] text-slate-500 block mt-1">ระยะศูนย์กลางถึงศูนย์กลาง</span>
+                </div>
+
+                <!-- Card 3: Angle per Notch -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-md border-l-4 border-l-emerald-500">
+                    <span class="text-[11px] font-medium text-slate-400 block mb-1">มุมรอยบากต่อช่อง (Angle)</span>
+                    <div class="text-xl sm:text-2xl font-bold font-mono text-emerald-400" id="res_notchAngle">0.0°</div>
+                    <span class="text-[10px] text-slate-500 block mt-1">มุมองศาสามเหลี่ยมตัว V</span>
+                </div>
+
+                <!-- Card 4: Total Arc Bend Length -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow-md border-l-4 border-l-purple-500">
+                    <span class="text-[11px] font-medium text-slate-400 block mb-1">ความยาวช่วงโค้ง (Arc Length)</span>
+                    <div class="text-xl sm:text-2xl font-bold font-mono text-purple-400" id="res_arcLength">0.0 <span class="text-xs text-slate-400 font-sans">มม.</span></div>
+                    <span class="text-[10px] text-slate-500 block mt-1">ระยะทางเนื้อเหล็กช่วงดัด</span>
+                </div>
+            </div>
+
+            <!-- Interactive Visualizer Panel -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+                
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-chart-area text-amber-400"></i>
+                        <h3 class="font-semibold text-sm sm:text-base text-slate-200">ภาพจำลองแบบร่าง (Interactive Layout Blueprint)</h3>
+                    </div>
+
+                    <!-- View Switcher Tabs -->
+                    <div class="flex bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+                        <button id="tabFlat" onclick="switchTab('flat')" class="px-3 py-1.5 rounded-md font-medium transition-all bg-amber-500 text-slate-950 font-semibold shadow">
+                            <i class="fa-solid fa-ruler-combined mr-1"></i>แบบคลี่แผ่นราบ (Flat Layout)
+                        </button>
+                        <button id="tabFolded" onclick="switchTab('folded')" class="px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200 transition-all">
+                            <i class="fa-solid fa-circle-notch mr-1"></i>ชิ้นงานหลังดัดโค้ง (Folded Preview)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Canvas Visualizer Container -->
+                <div class="relative w-full bg-slate-950 rounded-xl border border-slate-800 overflow-hidden min-h-[320px] flex items-center justify-center p-2">
+                    <canvas id="visualizerCanvas" class="w-full h-[360px] block cursor-crosshair"></canvas>
+                    
+                    <!-- Overlay Controls / Hint -->
+                    <div class="absolute bottom-2 right-3 text-[10px] text-slate-500 bg-slate-900/80 backdrop-blur px-2 py-1 rounded border border-slate-800 pointer-events-none">
+                        <i class="fa-solid fa-eye mr-1"></i>แสดงสเกลปรับขนาดอัตโนมัติ (Auto-scaled)
+                    </div>
+                </div>
+
+                <!-- Detailed Parameters Table & Print Specifications -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
+                    <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 space-y-2">
+                        <span class="font-semibold text-slate-300 block border-b border-slate-800 pb-1.5 text-xs">
+                            <i class="fa-solid fa-list-check text-amber-400 mr-1.5"></i>รายละเอียดการขีดระยะวัดตัดบนเหล็ก
+                        </span>
+                        <div class="space-y-1.5 text-slate-300">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">ขนาดรอยตัดบากวี (Top V Width):</span>
+                                <span class="font-mono text-amber-400 font-semibold" id="table_vWidth">0.0 mm</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">ระยะห่างระหว่างจุดยอดวี (Pitch):</span>
+                                <span class="font-mono text-slate-200 font-semibold" id="table_pitch">0.0 mm</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">ระยะห่างขอบก้นร่องสามเหลี่ยม:</span>
+                                <span class="font-mono text-slate-200" id="table_flatSegment">0.0 mm</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">ความลึกแผลตัดบาก (Cut Depth):</span>
+                                <span class="font-mono text-slate-200" id="table_cutDepth">0.0 mm</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80 space-y-2">
+                        <span class="font-semibold text-slate-300 block border-b border-slate-800 pb-1.5 text-xs">
+                            <i class="fa-solid fa-calculator text-amber-400 mr-1.5"></i>ข้อมูลรัศมีและความยาวเนื้อเหล็ก
+                        </span>
+                        <div class="space-y-1.5 text-slate-300">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">รัศมีโค้งนอก (Outer Radius - R<sub>out</sub>):</span>
+                                <span class="font-mono text-slate-200" id="table_outerRadius">0.0 mm</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">รัศมีแนวแกนกลาง (Neutral Axis R):</span>
+                                <span class="font-mono text-slate-200" id="table_midRadius">0.0 mm</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">ปริมาณเนื้อเหล็กที่ถูกสูญเสีย/ตัดออก:</span>
+                                <span class="font-mono text-rose-400 font-semibold" id="table_totalRemoved">0.0 mm</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">ความยาวเนื้อเหล็กแนวล่างสุด (สันพับ):</span>
+                                <span class="font-mono text-emerald-400" id="table_bottomArc">0.0 mm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Printable Template Summary Section (Hidden on screen, shown in Print) -->
+    <div id="printSection" class="hidden print:block p-8 font-sans">
+        <div class="border-b-2 border-black pb-4 mb-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">ใบแบบร่างการตัดบากเหล็กกล่อง (V-Notch Cutting Pattern)</h1>
+                <p class="text-sm text-gray-600">คำนวณและออกแบบโดยระบบอัตโนมัติ V-Notch Pro</p>
+            </div>
+            <div class="text-right text-xs text-gray-500">
+                วันที่พิมพ์: <span id="printDate"></span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-6 mb-6 text-sm border p-4 rounded bg-gray-50">
+            <div>
+                <h3 class="font-bold border-b pb-1 mb-2">พารามิเตอร์อินพุต (Inputs)</h3>
+                <p>ขนาดเหล็กกล่อง: <strong id="p_tubeSize">38 x 25 มม.</strong></p>
+                <p>มุมดัดรวม (Bend Angle): <strong id="p_angle">90°</strong></p>
+                <p>รัศมีดัดโค้งด้านใน (Inner Radius): <strong id="p_radius">100 มม.</strong></p>
+                <p>จำนวนรอยตัดบาก (Number of Cuts): <strong id="p_cuts">8 ช่อง</strong></p>
+                <p>ความหนาใบตัด (Kerf): <strong id="p_kerf">1.2 มม.</strong></p>
+            </div>
+            <div>
+                <h3 class="font-bold border-b pb-1 mb-2">ผลลัพธ์ระยะบากตัด (Calculated Results)</h3>
+                <p>ความกว้างปากร่องวี (V-Notch Width): <strong id="p_vWidth" class="text-lg">0.0 มม.</strong></p>
+                <p>ระยะพิตช์ห่างระหว่างศูนย์กลางรอยตัด (Pitch): <strong id="p_pitch">0.0 มม.</strong></p>
+                <p>มุมสามเหลี่ยมร่องวีต่อช่อง: <strong id="p_notchAngle">0.0°</strong></p>
+                <p>ความยาวช่วงโค้งสันดัดด้านล่าง: <strong id="p_arcLength">0.0 มม.</strong></p>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <h3 class="font-bold mb-2">ภาพแบบแปลนตัดบากเหล็ก (Flat Template Pattern)</h3>
+            <div class="border border-black p-2 flex justify-center">
+                <canvas id="printCanvas" width="700" height="250" class="w-full h-auto"></canvas>
+            </div>
+        </div>
+
+        <div class="text-xs text-gray-600 mt-8 border-t pt-4">
+            <p>* หมายเหตุ: ตรวจสอบความหนาใบตัดจริงของเครื่องเจียร์ก่อนขีดระยะบากบนเหล็กจริง</p>
+        </div>
+    </div>
+
+    <!-- Application Logic Script -->
+    <script>
+        // Global State
+        let activeTab = 'flat'; // 'flat' or 'folded'
+
+        // DOM Element References
+        const tubeHeightInput = document.getElementById('tubeHeight');
+        const tubeWidthInput = document.getElementById('tubeWidth');
+        const bendAngleInput = document.getElementById('bendAngle');
+        const innerRadiusInput = document.getElementById('innerRadius');
+        const numCutsInput = document.getElementById('numCuts');
+        const numCutsRange = document.getElementById('numCutsRange');
+        const kerfInput = document.getElementById('kerf');
+
+        const canvas = document.getElementById('visualizerCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Sync inputs
+        numCutsRange.addEventListener('input', (e) => {
+            numCutsInput.value = e.target.value;
+            calculateAndDraw();
+        });
+
+        numCutsInput.addEventListener('input', (e) => {
+            numCutsRange.value = e.target.value;
+            calculateAndDraw();
+        });
+
+        const inputs = [tubeHeightInput, tubeWidthInput, bendAngleInput, innerRadiusInput, kerfInput];
+        inputs.forEach(input => {
+            input.addEventListener('input', calculateAndDraw);
+        });
+
+        function setAngle(deg) {
+            bendAngleInput.value = deg;
+            calculateAndDraw();
+        }
+
+        function resetDefaults() {
+            tubeHeightInput.value = 3.8;
+            tubeWidthInput.value = 2.5;
+            bendAngleInput.value = 90;
+            innerRadiusInput.value = 10;
+            numCutsInput.value = 8;
+            numCutsRange.value = 8;
+            kerfInput.value = 0.12;
+            calculateAndDraw();
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+            const tabFlat = document.getElementById('tabFlat');
+            const tabFolded = document.getElementById('tabFolded');
+
+            if (tab === 'flat') {
+                tabFlat.className = "px-3 py-1.5 rounded-md font-semibold transition-all bg-amber-500 text-slate-950 shadow";
+                tabFolded.className = "px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200 transition-all";
+            } else {
+                tabFolded.className = "px-3 py-1.5 rounded-md font-semibold transition-all bg-amber-500 text-slate-950 shadow";
+                tabFlat.className = "px-3 py-1.5 rounded-md font-medium text-slate-400 hover:text-slate-200 transition-all";
+            }
+            calculateAndDraw();
+        }
+
+        // Calculation Engine
+        function calculateNotches() {
+            // User inputs are centimeters; calculations stay in millimeters.
+            const H = (parseFloat(tubeHeightInput.value) || 0) * 10; // Tube depth/height facing the cut
+            const W = (parseFloat(tubeWidthInput.value) || 0) * 10;
+            const A_deg = parseFloat(bendAngleInput.value) || 0; // Total bend angle
+            const R_in = (parseFloat(innerRadiusInput.value) || 0) * 10; // Inner Radius
+            const N = parseInt(numCutsInput.value) || 1; // Number of cuts
+            const kerf = (parseFloat(kerfInput.value) || 0) * 10;
+
+            const A_rad = (A_deg * Math.PI) / 180;
+            
+            // Outer Radius (where the notches are open)
+            const R_out = R_in + H;
+            
+            // Outer Arc Length vs Inner Arc Length
+            const arcInner = R_in * A_rad;
+            const arcOuter = R_out * A_rad;
+
+            // Total material to remove at the outer top edge
+            const totalRemovedMaterial = arcOuter - arcInner;
+
+            // Individual V-notch angle
+            const notchAngleDeg = A_deg / N;
+            const notchAngleRad = (notchAngleDeg * Math.PI) / 180;
+
+            // Width of individual notch at the top outer edge
+            const vWidthTop = totalRemovedMaterial / N;
+
+            // Pitch distance along the bottom spine between notch centerlines
+            const pitch = arcInner / N;
+
+            // Flat segment distance at the bottom spine between edges of notches
+            // Note: Bottom spine remains continuous (inner arc = arcInner)
+            const flatSegmentBottom = arcInner / N;
+
+            return {
+                H,
+                W,
+                A_deg,
+                R_in,
+                R_out,
+                N,
+                kerf,
+                arcInner,
+                arcOuter,
+                totalRemovedMaterial,
+                notchAngleDeg,
+                vWidthTop,
+                pitch,
+                flatSegmentBottom
+            };
+        }
+
+        // Update UI Text & Numbers
+        function updateUI(calc) {
+            document.getElementById('val_tubeHeight').innerText = `${calc.H} mm`;
+            document.getElementById('val_tubeWidth').innerText = `${calc.W} mm`;
+            document.getElementById('val_bendAngle').innerText = `${calc.A_deg}°`;
+            document.getElementById('val_innerRadius').innerText = `${calc.R_in} mm`;
+            document.getElementById('val_numCuts').innerText = `${calc.N} รอย`;
+            document.getElementById('val_kerf').innerText = `${calc.kerf} mm`;
+
+            // Dashboard cards
+            document.getElementById('res_notchWidth').innerHTML = `${calc.vWidthTop.toFixed(1)} <span class="text-xs text-slate-400 font-sans">มม.</span>`;
+            document.getElementById('res_pitch').innerHTML = `${calc.pitch.toFixed(1)} <span class="text-xs text-slate-400 font-sans">มม.</span>`;
+            document.getElementById('res_notchAngle').innerText = `${calc.notchAngleDeg.toFixed(1)}°`;
+            document.getElementById('res_arcLength').innerHTML = `${calc.arcInner.toFixed(1)} <span class="text-xs text-slate-400 font-sans">มม.</span>`;
+
+            // Detail Tables
+            document.getElementById('table_vWidth').innerText = `${calc.vWidthTop.toFixed(2)} mm`;
+            document.getElementById('table_pitch').innerText = `${calc.pitch.toFixed(2)} mm`;
+            document.getElementById('table_flatSegment').innerText = `${calc.flatSegmentBottom.toFixed(2)} mm`;
+            document.getElementById('table_cutDepth').innerText = `${calc.H.toFixed(1)} mm`;
+
+            document.getElementById('table_outerRadius').innerText = `${calc.R_out.toFixed(1)} mm`;
+            document.getElementById('table_midRadius').innerText = `${(calc.R_in + calc.H/2).toFixed(1)} mm`;
+            document.getElementById('table_totalRemoved').innerText = `${calc.totalRemovedMaterial.toFixed(1)} mm`;
+            document.getElementById('table_bottomArc').innerText = `${calc.arcInner.toFixed(1)} mm`;
+
+            // Print info
+            document.getElementById('p_tubeSize').innerText = `${calc.H} x ${calc.W} มม.`;
+            document.getElementById('p_angle').innerText = `${calc.A_deg}°`;
+            document.getElementById('p_radius').innerText = `${calc.R_in} มม.`;
+            document.getElementById('p_cuts').innerText = `${calc.N} ช่อง`;
+            document.getElementById('p_kerf').innerText = `${calc.kerf} มม.`;
+            document.getElementById('p_vWidth').innerText = `${calc.vWidthTop.toFixed(2)} มม.`;
+            document.getElementById('p_pitch').innerText = `${calc.pitch.toFixed(2)} มม.`;
+            document.getElementById('p_notchAngle').innerText = `${calc.notchAngleDeg.toFixed(1)}°`;
+            document.getElementById('p_arcLength').innerText = `${calc.arcInner.toFixed(2)} มม.`;
+            document.getElementById('printDate').innerText = new Date().toLocaleDateString('th-TH');
+        }
+
+        // Main Render & Draw function
+        function calculateAndDraw() {
+            const calc = calculateNotches();
+            updateUI(calc);
+
+            // Resize canvas crispness
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+
+            const width = rect.width;
+            const height = rect.height;
+
+            ctx.clearRect(0, 0, width, height);
+
+            if (activeTab === 'flat') {
+                drawFlatPattern(ctx, width, height, calc);
+            } else {
+                drawFoldedPreview(ctx, width, height, calc);
+            }
+
+            // Also draw print canvas
+            const printCanvas = document.getElementById('printCanvas');
+            const pCtx = printCanvas.getContext('2d');
+            pCtx.clearRect(0, 0, printCanvas.width, printCanvas.height);
+            drawFlatPattern(pCtx, printCanvas.width, printCanvas.height, calc, true);
+        }
+
+        // Draw Unfolded / Flat Tube Cut Pattern
+        function drawFlatPattern(c, w, h, calc, isPrint = false) {
+            const marginX = 60;
+            const marginY = 70;
+            
+            // Total length of flat tube section shown = Straight tail + arcInner + Straight tail
+            const straightTail = Math.max(30, calc.pitch);
+            const totalFlatLength = calc.arcInner + (straightTail * 2);
+
+            const scale = Math.min((w - marginX * 2) / totalFlatLength, (h - marginY * 2) / (calc.H * 2.2));
+            
+            const tubeH = calc.H * scale;
+            const startX = (w - totalFlatLength * scale) / 2;
+            const startY = h / 2 - tubeH / 2;
+
+            // Background grid
+            if (!isPrint) {
+                c.strokeStyle = '#1e293b';
+                c.lineWidth = 1;
+                c.beginPath();
+                for (let x = 0; x < w; x += 20) { c.moveTo(x, 0); c.lineTo(x, h); }
+                for (let y = 0; y < h; y += 20) { c.moveTo(0, y); c.lineTo(w, y); }
+                c.stroke();
+            }
+
+            // Base Steel Bar Outline
+            const barLengthPx = totalFlatLength * scale;
+            const arcStartPx = startX + straightTail * scale;
+            
+            // Tube body fill
+            c.fillStyle = isPrint ? '#f1f5f9' : '#1e293b';
+            c.strokeStyle = isPrint ? '#000000' : '#64748b';
+            c.lineWidth = 2;
+
+            c.fillRect(startX, startY, barLengthPx, tubeH);
+            c.strokeRect(startX, startY, barLengthPx, tubeH);
+
+            // Draw Bottom Spine (Uncut edge)
+            c.strokeStyle = isPrint ? '#000' : '#38bdf8';
+            c.lineWidth = 3;
+            c.beginPath();
+            c.moveTo(startX, startY + tubeH);
+            c.lineTo(startX + barLengthPx, startY + tubeH);
+            c.stroke();
+
+            // Draw V-Notch Cutouts
+            const vWidthPx = calc.vWidthTop * scale;
+            const pitchPx = calc.pitch * scale;
+
+            for (let i = 0; i < calc.N; i++) {
+                // Center position of each notch along the bottom spine
+                const notchCenterBottomPx = arcStartPx + (i + 0.5) * pitchPx;
+                const notchTopLeftPx = notchCenterBottomPx - vWidthPx / 2;
+                const notchTopRightPx = notchCenterBottomPx + vWidthPx / 2;
+
+                // Red fill for removed triangular notch
+                c.fillStyle = isPrint ? '#ffffff' : '#ef444422';
+                c.strokeStyle = isPrint ? '#dc2626' : '#f87171';
+                c.lineWidth = 1.5;
+
+                c.beginPath();
+                c.moveTo(notchTopLeftPx, startY);
+                c.lineTo(notchCenterBottomPx, startY + tubeH - 2); // Leave 2px spine
+                c.lineTo(notchTopRightPx, startY);
+                c.closePath();
+                c.fill();
+                c.stroke();
+
+                // Centerline dashed
+                c.strokeStyle = isPrint ? '#94a3b8' : '#f59e0b88';
+                c.setLineDash([3, 3]);
+                c.beginPath();
+                c.moveTo(notchCenterBottomPx, startY - 10);
+                c.lineTo(notchCenterBottomPx, startY + tubeH);
+                c.stroke();
+                c.setLineDash([]);
+            }
+
+            // Dimension Lines and Annotations
+            c.fillStyle = isPrint ? '#000' : '#f8fafc';
+            c.font = '11px Kanit, sans-serif';
+            c.textAlign = 'center';
+
+            // Top Dimension: V-Notch Width
+            if (calc.N > 0) {
+                const firstCenterPx = arcStartPx + 0.5 * pitchPx;
+                const topY = startY - 18;
+
+                c.strokeStyle = isPrint ? '#000' : '#fbbf24';
+                c.lineWidth = 1;
+
+                // V-width label arrow
+                c.beginPath();
+                c.moveTo(firstCenterPx - vWidthPx/2, topY);
+                c.lineTo(firstCenterPx + vWidthPx/2, topY);
+                c.stroke();
+
+                c.fillStyle = isPrint ? '#000' : '#fbbf24';
+                c.fillText(`V = ${(calc.vWidthTop / 10).toFixed(2)} cm`, firstCenterPx, topY - 5);
+            }
+
+            // Bottom Dimension: Pitch Spacing
+            if (calc.N > 1) {
+                const p1 = arcStartPx + 0.5 * pitchPx;
+                const p2 = arcStartPx + 1.5 * pitchPx;
+                const botY = startY + tubeH + 22;
+
+                c.strokeStyle = isPrint ? '#000' : '#38bdf8';
+                c.beginPath();
+                c.moveTo(p1, botY);
+                c.lineTo(p2, botY);
+                c.stroke();
+
+                c.fillStyle = isPrint ? '#000' : '#38bdf8';
+                c.fillText(`Pitch = ${(calc.pitch / 10).toFixed(2)} cm`, (p1 + p2) / 2, botY + 14);
+            }
+
+            // Labels
+            c.fillStyle = isPrint ? '#000' : '#94a3b8';
+            c.textAlign = 'left';
+            c.fillText(`ຄວາມເລິກ H = ${(calc.H / 10).toFixed(2)} cm`, startX, startY + tubeH / 2 + 4);
+        }
+
+        // Draw Folded Curved Steel Tube
+        function drawFoldedPreview(c, w, h, calc) {
+            const centerX = w / 2;
+            const centerY = h / 2 + 40;
+
+            const scale = Math.min((w * 0.7) / ((calc.R_out + 40) * 2), (h * 0.7) / ((calc.R_out + 40) * 2));
+
+            const rInPx = calc.R_in * scale;
+            const rOutPx = calc.R_out * scale;
+            const tubeHPx = calc.H * scale;
+
+            const totalAngleRad = (calc.A_deg * Math.PI) / 180;
+            const startAngleRad = Math.PI / 2 - totalAngleRad / 2;
+            const endAngleRad = startAngleRad + totalAngleRad;
+
+            // Draw Background Center Lines
+            c.strokeStyle = '#334155';
+            c.setLineDash([4, 4]);
+            c.beginPath();
+            c.arc(centerX, centerY, rInPx, startAngleRad, endAngleRad);
+            c.stroke();
+            c.setLineDash([]);
+
+            // Draw Folded Tube Segments
+            const notchAngleRad = totalAngleRad / calc.N;
+
+            for (let i = 0; i < calc.N; i++) {
+                const a1 = startAngleRad + i * notchAngleRad;
+                const a2 = a1 + notchAngleRad;
+
+                // Segment Outer / Inner points
+                const pIn1 = { x: centerX + rInPx * Math.cos(a1), y: centerY - rInPx * Math.sin(a1) };
+                const pIn2 = { x: centerX + rInPx * Math.cos(a2), y: centerY - rInPx * Math.sin(a2) };
+
+                const pOut1 = { x: centerX + rOutPx * Math.cos(a1), y: centerY - rOutPx * Math.sin(a1) };
+                const pOut2 = { x: centerX + rOutPx * Math.cos(a2), y: centerY - rOutPx * Math.sin(a2) };
+
+                // Draw Polygon Segment
+                c.fillStyle = '#1e293b';
+                c.strokeStyle = '#fbbf24';
+                c.lineWidth = 1.5;
+
+                c.beginPath();
+                c.moveTo(pIn1.x, pIn1.y);
+                c.lineTo(pIn2.x, pIn2.y);
+                c.lineTo(pOut2.x, pOut2.y);
+                c.lineTo(pOut1.x, pOut1.y);
+                c.closePath();
+                c.fill();
+                c.stroke();
+
+                // Joint weld lines
+                c.strokeStyle = '#ef444488';
+                c.lineWidth = 1;
+                c.beginPath();
+                c.moveTo(pIn1.x, pIn1.y);
+                c.lineTo(pOut1.x, pOut1.y);
+                c.stroke();
+            }
+
+            // Inner Bend Spine Arc
+            c.strokeStyle = '#38bdf8';
+            c.lineWidth = 3;
+            c.beginPath();
+            c.arc(centerX, centerY, rInPx, startAngleRad, endAngleRad, false);
+            c.stroke();
+
+            // Center Origin point and radius lines
+            c.fillStyle = '#f59e0b';
+            c.beginPath();
+            c.arc(centerX, centerY, 4, 0, Math.PI * 2);
+            c.fill();
+
+            // Radius Dimension Label
+            c.fillStyle = '#f8fafc';
+            c.font = '12px Kanit, sans-serif';
+            c.textAlign = 'center';
+            c.fillText(`R_in = ${(calc.R_in / 10).toFixed(2)} cm (${calc.A_deg}°)`, centerX, centerY + 20);
+        }
+
+        // Lao interface and centimeter display layer
+        (function setupLaoInterface() {
+            const $ = (s) => document.querySelector(s);
+            const $$ = (s) => Array.from(document.querySelectorAll(s));
+            const set = (s, value) => { const el = $(s); if (el) el.textContent = value; };
+            const cm = (value, digits = 2) => `${(value / 10).toFixed(digits)} cm`;
+            document.title = 'ໂປຣແກຣມຄຳນວນຮ່ອງ V ສຳລັບທໍ່ເຫຼັກ';
+
+            set('header h1', 'ຄຳນວນຮ່ອງ V ທໍ່ເຫຼັກ');
+            const badge = $('header h1 span');
+            if (badge) { badge.textContent = 'V-Notch'; }
+            set('header p', 'ຄຳນວນຈຸດບາກສຳລັບດັດທໍ່ເຫຼັກໃຫ້ເປັນສ່ວນໂຄ້ງ');
+            set('header button span', 'ພິມແບບຮ່າງ');
+            set('section.lg\\:col-span-4 h2', 'ຕັ້ງຄ່າຂະໜາດ ແລະ ມຸມດັດ');
+            const reset = $('section.lg\\:col-span-4 h2 + button');
+            if (reset) reset.innerHTML = '<i class="fa-solid fa-rotate-left mr-1"></i>ຄ່າເລີ່ມຕົ້ນ';
+
+            const labels = [
+                'ຄວາມເລິກທໍ່ດ້ານທີ່ຈະບາກ (H)',
+                'ຄວາມກວ້າງທໍ່ (W)',
+                'ມຸມດັດລວມ',
+                'ລັດສະໝີດ້ານໃນ (R)',
+                'ຈຳນວນຮ່ອງບາກ (N)',
+                'ຄວາມໜາໃບຕັດ (Kerf)'
+            ];
+            $$('#calcForm label > span:first-child').forEach((el, i) => { if (labels[i]) el.textContent = labels[i]; });
+            $$('#calcForm .absolute.inset-y-0.right-0').forEach(el => { el.textContent = el.textContent.includes('องศา') ? 'ອົງສາ (°)' : 'cm'; });
+            set('section.lg\\:col-span-4 .fa-lightbulb', '');
+            const hintTitle = $('section.lg\\:col-span-4 .fa-lightbulb')?.parentElement;
+            if (hintTitle) hintTitle.lastChild.textContent = 'ຄຳແນະນຳສຳລັບຊ່າງ';
+            const hints = [
+                'ຈຳນວນຮ່ອງຫຼາຍຂຶ້ນ ຈະເຮັດໃຫ້ສ່ວນໂຄ້ງລຽບຂຶ້ນ',
+                'ປ້ອນຄວາມໜາໃບຕັດເປັນ cm ເພື່ອໃຫ້ຄ່າຮ່ອງບາກແມ່ນຍຳ',
+                'ເຫຼືອເນື້ອເຫຼັກດ້ານລຸ່ມປະມານ 0.10–0.15 cm ກ່ອນພັບ'
+            ];
+            $$('section.lg\\:col-span-4 > div:last-child li').forEach((el, i) => { if (hints[i]) el.textContent = hints[i]; });
+
+            const cardLabels = ['ຄວາມກວ້າງຮ່ອງ V ຕໍ່ຊ່ອງ', 'ໄລຍະຫ່າງຮ່ອງບາກ (Pitch)', 'ມຸມຮ່ອງບາກຕໍ່ຊ່ອງ', 'ຄວາມຍາວສ່ວນໂຄ້ງ'];
+            ['res_notchWidth','res_pitch','res_notchAngle','res_arcLength'].forEach((id, i) => {
+                const el = document.getElementById(id); if (el) el.parentElement.previousElementSibling.textContent = cardLabels[i];
+            });
+            set('section.lg\\:col-span-8 h3', 'ພາບຈຳລອງແບບຮ່າງ');
+            set('#tabFlat', 'ແບບແຜ່ນຮາບ');
+            set('#tabFolded', 'ຊິ້ນງານຫຼັງດັດ');
+
+            const detailLabels = [
+                'ຂະໜາດຮ່ອງ V ດ້ານເທິງ', 'ໄລຍະຫ່າງຈຸດກາງຮ່ອງ (Pitch)',
+                'ໄລຍະລະຫວ່າງຂອບຮ່ອງສາມຫຼ່ຽມ', 'ຄວາມເລິກຮ່ອງບາກ',
+                'ລັດສະໝີດ້ານນອກ', 'ລັດສະໝີແກນກາງ',
+                'ເນື້ອເຫຼັກທີ່ຕັດອອກ', 'ຄວາມຍາວເສັ້ນໂຄ້ງດ້ານລຸ່ມ'
+            ];
+            ['table_vWidth','table_pitch','table_flatSegment','table_cutDepth','table_outerRadius','table_midRadius','table_totalRemoved','table_bottomArc'].forEach((id, i) => {
+                const el = document.getElementById(id); if (el) el.parentElement.firstElementChild.textContent = detailLabels[i];
+            });
+            const printHeadings = $$('#printSection h1, #printSection h3');
+            ['ແບບຕັດຮ່ອງ V ທໍ່ເຫຼັກ', 'ພາຣາມິເຕີປ້ອນເຂົ້າ', 'ຜົນການຄຳນວນ', 'ແບບແຜນຕັດຮ່ອງເຫຼັກ'].forEach((v, i) => { if (printHeadings[i]) printHeadings[i].textContent = v; });
+            const printLabels = ['ຂະໜາດທໍ່ເຫຼັກ:', 'ມຸມດັດລວມ:', 'ລັດສະໝີດ້ານໃນ:', 'ຈຳນວນຮ່ອງບາກ:', 'ຄວາມໜາໃບຕັດ:', 'ຄວາມກວ້າງຮ່ອງ V:', 'ໄລຍະຫ່າງຮ່ອງ (Pitch):', 'ມຸມຮ່ອງ V ຕໍ່ຊ່ອງ:', 'ຄວາມຍາວສ່ວນໂຄ້ງ:'];
+            $$('#printSection .grid p').forEach((el, i) => { if (printLabels[i]) el.firstChild.textContent = printLabels[i] + ' '; });
+
+            const originalUpdate = updateUI;
+            updateUI = function(calc) {
+                originalUpdate(calc);
+                set('val_tubeHeight', cm(calc.H)); set('val_tubeWidth', cm(calc.W));
+                set('val_bendAngle', `${calc.A_deg}°`); set('val_innerRadius', cm(calc.R_in));
+                set('val_numCuts', `${calc.N} ຮ່ອງ`); set('val_kerf', cm(calc.kerf));
+                set('res_notchWidth', cm(calc.vWidthTop, 2)); set('res_pitch', cm(calc.pitch, 2));
+                set('res_notchAngle', `${calc.notchAngleDeg.toFixed(1)}°`); set('res_arcLength', cm(calc.arcInner, 2));
+                set('table_vWidth', cm(calc.vWidthTop)); set('table_pitch', cm(calc.pitch));
+                set('table_flatSegment', cm(calc.flatSegmentBottom)); set('table_cutDepth', cm(calc.H, 1));
+                set('table_outerRadius', cm(calc.R_out, 1)); set('table_midRadius', cm(calc.R_in + calc.H / 2, 1));
+                set('table_totalRemoved', cm(calc.totalRemovedMaterial, 1)); set('table_bottomArc', cm(calc.arcInner, 1));
+                set('p_tubeSize', `${(calc.H / 10).toFixed(1)} x ${(calc.W / 10).toFixed(1)} cm`);
+                set('p_angle', `${calc.A_deg}°`); set('p_radius', cm(calc.R_in, 1));
+                set('p_cuts', `${calc.N} ຮ່ອງ`); set('p_kerf', cm(calc.kerf, 2));
+                set('p_vWidth', cm(calc.vWidthTop)); set('p_pitch', cm(calc.pitch));
+                set('p_notchAngle', `${calc.notchAngleDeg.toFixed(1)}°`); set('p_arcLength', cm(calc.arcInner));
+                set('printDate', new Date().toLocaleDateString('lo-LA'));
+            };
+        })();
+
+        // Initialize on load & handle resize
+        window.addEventListener('load', () => {
+            calculateAndDraw();
+        });
+
+        window.addEventListener('resize', () => {
+            calculateAndDraw();
+        });
+    </script>
+</body>
+</html>
