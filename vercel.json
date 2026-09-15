@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/steel_tube_v_notch_calculator.html"
+    }
+  ]
+}
